@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fff8ee;
+  --color-ink: #1f2544;
+  --color-muted: #5f6485;
+  --color-line: #eadfcb;
+  --color-brand: #f25c29;
+  --color-brand-dark: #d4461a;
+  --color-sky: #2f6fde;
+  --color-mint: #0a9f78;
+  --color-mint-soft: #dcf7ee;
+  --color-sun: #ffd166;
+  --color-sun-soft: #fff3cf;
+  --color-rose-soft: #ffe4dc;
+  --color-sky-soft: #e3edff;
+  --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+  --radius-blob: 1.75rem;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+.animate-wobble { animation: wobble 1.2s ease-in-out infinite; }
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-pop { animation: pop 0.35s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-wobble, .animate-pop { animation: none; }
+}

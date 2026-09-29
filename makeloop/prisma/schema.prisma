@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum UserRole {
+  PARENT
+  ADMIN
+}
+
+enum AttemptStatus {
+  PENDING_AI
+  EVALUATED
+  AI_FAILED
+}
+
+enum AttemptResult {
+  SUCCESS
+  PARTIAL
+  NEEDS_WORK
+  UNCLEAR
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String         @map("password_hash")
+  name         String
+  role         UserRole       @default(PARENT)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  children     ChildProfile[]
+
+  @@map("users")
+}
+
+model ChildProfile {
+  id           String        @id @default(cuid())
+  parentId     String        @map("parent_id")
+  name         String
+  age          Int
+  avatar       String        @default("rocket")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  parent       User          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  attempts     Attempt[]
+  skills       ChildSkill[]
+  achievements Achievement[]
+
+  @@index([parentId])
+  @@map("child_profiles")
+}
+
+model Mission {
+  id              String            @id @default(cuid())
+  slug            String            @unique
+  title           String
+  summary         String
+  objective       String
+  expectedObject  String            @map("expected_object")
+  requirements    String[]
+  concept         String
+  explanation     String
+  hints           String[]
+  safetyNotes     String?           @map("safety_notes")
+  minAge          Int               @map("min_age")
+  maxAge          Int               @map("max_age")
+  difficulty      Int               @default(1)
+  emoji           String            @default("🛠️")
+  materials       MissionMaterial[]
+  skills          MissionSkill[]
+  attempts        Attempt[]
+
+  @@map("missions")
+}
+
+model Material {
+  id       String            @id @default(cuid())
+  name     String            @unique
+  emoji    String            @default("📦")
+  missions MissionMaterial[]
+
+  @@map("materials")
+}
+
+model MissionMaterial {
+  missionId  String   @map("mission_id")
+  materialId String   @map("material_id")
+  quantity   String
+  mission    Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@id([missionId, materialId])
+  @@map("mission_materials")
+}
+
+model Attempt {
+  id            String         @id @default(cuid())
+  childId       String         @map("child_id")
+  missionId     String         @map("mission_id")
+  attemptNumber Int            @map("attempt_number")
+  imageUrl      String?        @map("image_url")
+  status        AttemptStatus  @default(PENDING_AI)
+  result        AttemptResult?
+  score         Int?
+  aiFeedback    Json?          @map("ai_feedback")
+  hintLevel     Int            @default(0) @map("hint_level")
+  hints         Json           @default("[]")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  child         ChildProfile   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  mission       Mission        @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, missionId, attemptNumber])
+  @@index([childId, missionId])
+  @@map("attempts")
+}
+
+model Skill {
+  id       String         @id @default(cuid())
+  slug     String         @unique
+  name     String
+  emoji    String         @default("⭐")
+  children ChildSkill[]
+  missions MissionSkill[]
+
+  @@map("skills")
+}
+
+model MissionSkill {
+  missionId String  @map("mission_id")
+  skillId   String  @map("skill_id")
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([missionId, skillId])
+  @@map("mission_skills")
+}
+
+model ChildSkill {
+  childId   String       @map("child_id")
+  skillId   String       @map("skill_id")
+  points    Int          @default(0)
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+  skill     Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([childId, skillId])
+  @@map("child_skills")
+}
+
+model Achievement {
+  id        String       @id @default(cuid())
+  childId   String       @map("child_id")
+  code      String
+  title     String
+  emoji     String
+  earnedAt  DateTime     @default(now()) @map("earned_at")
+  child     ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, code])
+  @@map("achievements")
+}
+
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([key, createdAt])
+  @@map("rate_limit_hits")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String?  @map("user_id")
+  childId   String?  @map("child_id")
+  props     Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([name, createdAt])
+  @@map("analytics_events")
+}
